@@ -1,0 +1,1731 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>OctoBall: Aventura Submarina</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #020712;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color: #fff;
+    }
+    #game-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at center, #07192f 0%, #020712 100%);
+    }
+    canvas {
+      display: block;
+      max-width: 100%;
+      max-height: 100%;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+      border-radius: 8px;
+    }
+    /* HUD Superior */
+    #hud {
+      position: absolute;
+      top: 14px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .hud-card {
+      background: rgba(7, 25, 47, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      backdrop-filter: blur(8px);
+      padding: 6px 14px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 13px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    }
+    .hud-hearts {
+      display: flex;
+      gap: 3px;
+      color: #f43f5e;
+      font-size: 16px;
+    }
+    .hud-pearls {
+      color: #fef08a;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .hud-level {
+      color: #38bdf8;
+      letter-spacing: 0.5px;
+    }
+    .diff-badge {
+      font-size: 10px;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 12px;
+      border: 1px solid rgba(56, 189, 248, 0.5);
+      background: rgba(15, 23, 42, 0.8);
+      color: #38bdf8;
+    }
+    .hud-controls {
+      pointer-events: auto;
+      display: flex;
+      gap: 6px;
+    }
+    .hud-btn {
+      background: rgba(7, 25, 47, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      color: #fff;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 15px;
+      transition: all 0.2s;
+    }
+    .hud-btn:hover {
+      background: #0284c7;
+      transform: scale(1.08);
+    }
+
+    /* Modal Screens Overlay */
+    .screen-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(2, 7, 18, 0.88);
+      backdrop-filter: blur(14px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 30;
+      text-align: center;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      overflow-y: auto;
+    }
+    .screen-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .title-banner {
+      font-size: clamp(30px, 5.5vw, 54px);
+      font-weight: 900;
+      background: linear-gradient(135deg, #ff2a7a, #ff758c, #38bdf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 4px;
+      text-shadow: 0 8px 24px rgba(255, 42, 122, 0.35);
+    }
+    .subtitle {
+      font-size: clamp(13px, 2.2vw, 16px);
+      color: #94a3b8;
+      max-width: 500px;
+      margin-bottom: 16px;
+      line-height: 1.4;
+    }
+    .btn-action {
+      background: linear-gradient(135deg, #ec4899, #f43f5e);
+      color: white;
+      border: none;
+      font-size: 16px;
+      font-weight: 800;
+      padding: 12px 34px;
+      border-radius: 30px;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(244, 63, 94, 0.5);
+      transition: all 0.2s;
+      margin: 6px;
+    }
+    .btn-action:hover {
+      transform: translateY(-2px) scale(1.04);
+      box-shadow: 0 10px 28px rgba(244, 63, 94, 0.7);
+    }
+    .btn-secondary {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      color: #38bdf8;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 10px 22px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin: 5px;
+    }
+    .btn-secondary:hover {
+      background: rgba(56, 189, 248, 0.15);
+    }
+
+    /* Selectors */
+    .selector-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .color-picker-box {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid #334155;
+      padding: 6px 12px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .color-dot {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: transform 0.2s;
+    }
+    .color-dot.selected {
+      border-color: #fff;
+      transform: scale(1.15);
+      box-shadow: 0 0 12px rgba(255,255,255,0.7);
+    }
+    .diff-box {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid #334155;
+      padding: 4px;
+      border-radius: 20px;
+      display: flex;
+      gap: 4px;
+    }
+    .diff-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      padding: 6px 14px;
+      border-radius: 16px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .diff-btn.selected {
+      background: #0284c7;
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(2, 132, 199, 0.5);
+    }
+
+    /* Mobile Virtual Controls */
+    #mobile-controls {
+      position: absolute;
+      bottom: 20px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      justify-content: space-between;
+      pointer-events: none;
+      z-index: 20;
+    }
+    .touch-btn {
+      pointer-events: auto;
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: rgba(7, 25, 47, 0.65);
+      border: 2px solid rgba(56, 189, 248, 0.5);
+      color: #38bdf8;
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+      user-select: none;
+      touch-action: manipulation;
+    }
+    .touch-btn:active {
+      transform: scale(0.92);
+      background: rgba(14, 165, 233, 0.5);
+    }
+    .touch-btn.jump {
+      width: 74px;
+      height: 74px;
+      background: linear-gradient(135deg, rgba(236, 72, 153, 0.7), rgba(244, 63, 94, 0.7));
+      border-color: #fff;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 800;
+    }
+    .d-pad {
+      display: flex;
+      gap: 12px;
+    }
+
+    .level-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      max-width: 440px;
+      margin: 14px auto;
+    }
+    .level-card-btn {
+      background: #0f172a;
+      border: 1px solid #334155;
+      padding: 10px;
+      border-radius: 12px;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.2s;
+    }
+    .level-card-btn:not(.locked):hover {
+      background: #0284c7;
+      border-color: #38bdf8;
+      transform: scale(1.05);
+    }
+    .level-card-btn.locked {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="gameCanvas" width="1024" height="576"></canvas>
+
+    <!-- Top HUD -->
+    <div id="hud">
+      <div class="hud-card">
+        <span class="hud-level" id="hud-level-text">Nivel 1/10</span>
+        <div class="hud-hearts" id="hud-hearts">❤️❤️❤️</div>
+        <span class="diff-badge" id="hud-diff-badge">NORMAL</span>
+      </div>
+      <div id="hud-shield" class="hud-card" style="display:none; color:#38bdf8; border-color:#38bdf8;">
+        🛡️ <span id="hud-shield-text">ESCUDO: 10.0s</span>
+      </div>
+      <div class="hud-card">
+        <div class="hud-pearls">
+          <span>⚪</span>
+          <span id="hud-pearls-text">0 / 5</span>
+        </div>
+      </div>
+      <div class="hud-controls">
+        <button class="hud-btn" id="btn-sound" title="Sonido">🔊</button>
+        <button class="hud-btn" id="btn-restart" title="Reiniciar Nivel">🔄</button>
+        <button class="hud-btn" id="btn-pause" title="Pausa">⏸️</button>
+      </div>
+    </div>
+
+    <!-- Mobile Virtual Controls -->
+    <div id="mobile-controls">
+      <div class="d-pad">
+        <button class="touch-btn" id="btn-left">◀</button>
+        <button class="touch-btn" id="btn-right">▶</button>
+      </div>
+      <button class="touch-btn jump" id="btn-jump">SALTO</button>
+    </div>
+
+    <!-- Screen 1: Start Menu -->
+    <div class="screen-overlay active" id="screen-start">
+      <!-- Mascot -->
+      <div style="position:relative; margin-bottom: 8px;">
+        <div id="mascot-ball" style="width: 100px; height: 100px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.5); margin: 0 auto; display: flex; align-items: center; justify-content: center; font-size: 50px; background: radial-gradient(circle at 35% 30%, #ff4b8b, #ff1168 55%, #ff5722 85%); box-shadow: 0 0 35px #f43f5e; cursor: pointer; transition: transform 0.2s;" title="¡Tócame para saltar!">
+          🐙
+        </div>
+      </div>
+
+      <h1 class="title-banner" style="letter-spacing: -1px; text-shadow: 0 0 25px rgba(56,189,248,0.7), 0 0 45px rgba(236,72,153,0.5);">
+        OCTOBALL
+      </h1>
+      <p style="color: #38bdf8; font-weight: 800; font-size: 13px; letter-spacing: 2px; margin-bottom: 12px; text-shadow: 0 0 10px #38bdf8;">
+        🫧 AVENTURA SUBMARINA 🫧
+      </p>
+
+      <!-- Color & Difficulty Selectors -->
+      <div class="selector-row">
+        <div class="color-picker-box">
+          <span style="font-size: 11px; color:#94a3b8; font-weight: bold;">COLOR:</span>
+          <div class="color-dot selected" style="background:#ff2a7a;" data-color="coral" title="Rojo/Rosa Coral"></div>
+          <div class="color-dot" style="background:#38bdf8;" data-color="ocean" title="Azul Océano"></div>
+          <div class="color-dot" style="background:#4ade80;" data-color="kelp" title="Verde Alga"></div>
+          <div class="color-dot" style="background:#c084fc;" data-color="neon" title="Púrpura Neón"></div>
+          <div class="color-dot" style="background:#fde047;" data-color="sun" title="Dorado Sol"></div>
+        </div>
+
+        <div class="diff-box">
+          <button class="diff-btn" data-diff="easy">Fácil</button>
+          <button class="diff-btn selected" data-diff="normal">Normal</button>
+          <button class="diff-btn" data-diff="hard">Difícil</button>
+        </div>
+      </div>
+
+      <div>
+        <button class="btn-action" id="btn-start-game">▶ JUGAR AHORA</button>
+        <button class="btn-secondary" id="btn-open-levels">🗺️ NIVELES (10)</button>
+      </div>
+    </div>
+
+    <!-- Screen 2: Level Select Modal -->
+    <div class="screen-overlay" id="screen-levels">
+      <h2 style="font-size: 26px; font-weight: 800; color: #38bdf8; margin-bottom: 6px;">SELECCIÓN DE NIVEL</h2>
+      <p class="subtitle" style="margin-bottom: 10px;">10 Niveles con tiburones (desde N5) y Megalodón (N9-N10).</p>
+      <div class="level-grid" id="level-grid-container"></div>
+      <button class="btn-secondary" id="btn-close-levels">Volver</button>
+    </div>
+
+    <!-- Screen 3: Level Complete -->
+    <div class="screen-overlay" id="screen-complete">
+      <h2 style="font-size: 34px; font-weight: 900; color: #4ade80; margin-bottom: 6px;">¡NIVEL COMPLETADO!</h2>
+      <p class="subtitle" id="complete-subtitle">Has abierto el cofre del tesoro.</p>
+      <div style="font-size: 18px; font-weight: 700; color: #fef08a; margin-bottom: 18px;">
+        Perlas: <span id="complete-pearls-count">0</span>
+      </div>
+      <div>
+        <button class="btn-action" id="btn-next-level">SIGUIENTE NIVEL ➔</button>
+        <button class="btn-secondary" id="btn-replay-level">Rejugar Nivel</button>
+      </div>
+    </div>
+
+    <!-- Screen 4: Game Over -->
+    <div class="screen-overlay" id="screen-gameover">
+      <h2 style="font-size: 36px; font-weight: 900; color: #f43f5e; margin-bottom: 6px;">¡GAME OVER!</h2>
+      <p class="subtitle">Los depredadores o espinas te han derrotado en las profundidades.</p>
+      <button class="btn-action" id="btn-retry-game">🔄 REINTENTAR</button>
+      <button class="btn-secondary" id="btn-menu-from-gameover">Menú Principal</button>
+    </div>
+
+    <!-- Screen 5: Final Victory -->
+    <div class="screen-overlay" id="screen-victory">
+      <h1 class="title-banner">¡VICTORIA TOTAL!</h1>
+      <p class="subtitle">¡Has derrotado al colosal Megalodón y conquistado los 10 niveles del océano!</p>
+      <div style="background: rgba(15,23,42,0.85); border: 1px solid #38bdf8; border-radius: 16px; padding: 14px 24px; margin-bottom: 20px;">
+        <div style="color: #fef08a; font-size: 20px; font-weight: 800; margin-bottom: 4px;">🏆 Pulpo Conquistador de los Mares</div>
+        <div style="color: #cbd5e1; font-size: 14px;">Total de Perlas: <span id="victory-pearls" style="color:#fff; font-weight:bold;">0</span></div>
+      </div>
+      <button class="btn-action" id="btn-restart-adventure">JUGAR DE NUEVO</button>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // AUDIO ENGINE (Web Audio API nativo con tiburón y megalodón)
+    // =========================================================================
+    const Sound = {
+      ctx: null, muted: false,
+      init() {
+        if (!this.ctx) {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AC();
+        }
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+      },
+      toggleMute() { this.muted = !this.muted; return this.muted; },
+      jump() {
+        if (this.muted) return; this.init();
+        try {
+          const t = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const g = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(220, t);
+          osc.frequency.exponentialRampToValueAtTime(560, t + 0.15);
+          g.gain.setValueAtTime(0.25, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+          osc.connect(g); g.connect(this.ctx.destination);
+          osc.start(t); osc.stop(t + 0.19);
+        } catch(e){}
+      },
+      bounce() {
+        if (this.muted) return; this.init();
+        try {
+          const t = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const g = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(140, t);
+          osc.frequency.exponentialRampToValueAtTime(620, t + 0.09);
+          osc.frequency.exponentialRampToValueAtTime(300, t + 0.25);
+          g.gain.setValueAtTime(0.3, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+          osc.connect(g); g.connect(this.ctx.destination);
+          osc.start(t); osc.stop(t + 0.29);
+        } catch(e){}
+      },
+      pearl() {
+        if (this.muted) return; this.init();
+        try {
+          const t = this.ctx.currentTime;
+          [1046.5, 1318.5, 1567.98].forEach((f, idx) => {
+            const osc = this.ctx.createOscillator();
+            const g = this.ctx.createGain();
+            const st = t + idx * 0.04;
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(f, st);
+            g.gain.setValueAtTime(0.18, st);
+            g.gain.exponentialRampToValueAtTime(0.001, st + 0.28);
+            osc.connect(g); g.connect(this.ctx.destination);
+            osc.start(st); osc.stop(st + 0.3);
+          });
+        } catch(e){}
+      },
+      chomp() {
+        if (this.muted) return; this.init();
+        try {
+          const t = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const g = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(320, t);
+          osc.frequency.exponentialRampToValueAtTime(70, t + 0.12);
+          g.gain.setValueAtTime(0.35, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+          osc.connect(g); g.connect(this.ctx.destination);
+          osc.start(t); osc.stop(t + 0.16);
+        } catch(e){}
+      },
+      roar() {
+        if (this.muted) return; this.init();
+        try {
+          const t = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const g = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(80, t);
+          osc.frequency.exponentialRampToValueAtTime(30, t + 0.7);
+          g.gain.setValueAtTime(0.4, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.75);
+          osc.connect(g); g.connect(this.ctx.destination);
+          osc.start(t); osc.stop(t + 0.8);
+        } catch(e){}
+      },
+      crumble() {
+        if (this.muted) return; this.init();
+        try {
+          const t = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const g = this.ctx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(90, t);
+          osc.frequency.setValueAtTime(60, t + 0.08);
+          g.gain.setValueAtTime(0.15, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+          osc.connect(g); g.connect(this.ctx.destination);
+          osc.start(t); osc.stop(t + 0.2);
+        } catch(e){}
+      },
+      win() {
+        if (this.muted) return; this.init();
+        try {
+          const t = this.ctx.currentTime;
+          [523.25, 659.25, 783.99, 1046.5].forEach((f, idx) => {
+            const osc = this.ctx.createOscillator();
+            const g = this.ctx.createGain();
+            const st = t + idx * 0.12;
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(f, st);
+            g.gain.setValueAtTime(0.25, st);
+            g.gain.exponentialRampToValueAtTime(0.001, st + 0.3);
+            osc.connect(g); g.connect(this.ctx.destination);
+            osc.start(st); osc.stop(st + 0.35);
+          });
+        } catch(e){}
+      },
+      shieldCollect() {
+        if (this.muted) return; this.init();
+        try {
+          const t = this.ctx.currentTime;
+          [698.46, 880.0, 1046.5, 1318.5].forEach((f, i) => {
+            const osc = this.ctx.createOscillator();
+            const g = this.ctx.createGain();
+            const st = t + i * 0.05;
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(f, st);
+            osc.frequency.exponentialRampToValueAtTime(f * 1.1, st + 0.3);
+            g.gain.setValueAtTime(0.2, st);
+            g.gain.exponentialRampToValueAtTime(0.001, st + 0.35);
+            osc.connect(g); g.connect(this.ctx.destination);
+            osc.start(st); osc.stop(st + 0.4);
+          });
+        } catch(e){}
+      },
+      shieldBreak() {
+        if (this.muted) return; this.init();
+        try {
+          const t = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const g = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(440, t);
+          osc.frequency.exponentialRampToValueAtTime(110, t + 0.22);
+          g.gain.setValueAtTime(0.35, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
+          osc.connect(g); g.connect(this.ctx.destination);
+          osc.start(t); osc.stop(t + 0.25);
+        } catch(e){}
+      }
+    };
+
+    // Color schemes
+    const PALETTES = {
+      coral: { primary: '#ff4b8b', mid: '#ff1168', warmth: '#ff5722', curls: '#ff3366', cheek: 'rgba(244,63,94,0.45)' },
+      ocean: { primary: '#38bdf8', mid: '#0284c7', warmth: '#0369a1', curls: '#0ea5e9', cheek: 'rgba(56,189,248,0.45)' },
+      kelp: { primary: '#4ade80', mid: '#16a34a', warmth: '#15803d', curls: '#22c55e', cheek: 'rgba(74,222,128,0.45)' },
+      neon: { primary: '#c084fc', mid: '#9333ea', warmth: '#7e22ce', curls: '#a855f7', cheek: 'rgba(192,132,252,0.45)' },
+      sun: { primary: '#fde047', mid: '#eab308', warmth: '#ea580c', curls: '#f59e0b', cheek: 'rgba(251,146,60,0.45)' }
+    };
+
+    const DIFF_CONFIGS = {
+      easy: { lives: 5, grav: 0.32, speedMult: 0.75, label: 'FÁCIL' },
+      normal: { lives: 3, grav: 0.38, speedMult: 1.0, label: 'NORMAL' },
+      hard: { lives: 1, grav: 0.44, speedMult: 1.35, label: 'DIFÍCIL' }
+    };
+
+    let selectedColor = 'coral';
+    let selectedDiff = 'normal';
+
+    // 10 Niveles con tiburones y megalodón
+    const LEVELS = [
+      {
+        id: 1, title: 'Nivel 1: Primeros Aleteos', width: 1400, height: 700, playerStart: { x: 100, y: 500 },
+        platforms: [
+          { x: 0, y: 580, w: 450, h: 120, type: 'solid' }, { x: 520, y: 540, w: 320, h: 160, type: 'solid' },
+          { x: 920, y: 480, w: 480, h: 220, type: 'solid' }, { x: 380, y: 440, w: 100, h: 25, type: 'solid' },
+          { x: 780, y: 380, w: 110, h: 25, type: 'solid' }, { x: -50, y: 0, w: 50, h: 700, type: 'solid' },
+          { x: 1400, y: 0, w: 50, h: 700, type: 'solid' }
+        ],
+        enemies: [],
+        pearls: [
+          { x: 260, y: 530, radius: 12, collected: false, floatOffset: 0 },
+          { x: 430, y: 390, radius: 12, collected: false, floatOffset: 1 },
+          { x: 640, y: 490, radius: 12, collected: false, floatOffset: 2 },
+          { x: 835, y: 330, radius: 12, collected: false, floatOffset: 3 },
+          { x: 1080, y: 430, radius: 12, collected: false, floatOffset: 4 }
+        ],
+        trampolines: [], currents: [], goal: { x: 1260, y: 416, w: 64, h: 64, isOpen: false, openProgress: 0 }
+      },
+      {
+        id: 2, title: 'Nivel 2: El Arrecife Espinoso', width: 1700, height: 700, playerStart: { x: 100, y: 500 },
+        platforms: [
+          { x: 0, y: 580, w: 320, h: 120, type: 'solid' }, { x: 400, y: 560, w: 260, h: 140, type: 'solid' },
+          { x: 740, y: 520, w: 280, h: 180, type: 'solid' }, { x: 1100, y: 480, w: 200, h: 30, type: 'solid' },
+          { x: 1380, y: 540, w: 320, h: 160, type: 'solid' }, { x: 320, y: 670, w: 80, h: 30, type: 'spike' },
+          { x: 660, y: 670, w: 80, h: 30, type: 'spike' }, { x: 1020, y: 670, w: 360, h: 30, type: 'spike' },
+          { x: -50, y: 0, w: 50, h: 700, type: 'solid' }, { x: 1700, y: 0, w: 50, h: 700, type: 'solid' }
+        ],
+        enemies: [
+          { x: 530, y: 538, radius: 18, type: 'static', originX: 530, originY: 538, range: 0, speed: 0, direction: 1, rotation: 0 },
+          { x: 880, y: 498, radius: 18, type: 'static', originX: 880, originY: 498, range: 0, speed: 0, direction: 1, rotation: 0 }
+        ],
+        pearls: [
+          { x: 220, y: 530, radius: 12, collected: false, floatOffset: 0 }, { x: 530, y: 450, radius: 12, collected: false, floatOffset: 1 },
+          { x: 800, y: 470, radius: 12, collected: false, floatOffset: 2 }, { x: 880, y: 410, radius: 12, collected: false, floatOffset: 3 },
+          { x: 1200, y: 420, radius: 12, collected: false, floatOffset: 4 }, { x: 1450, y: 490, radius: 12, collected: false, floatOffset: 5 }
+        ],
+        shields: [
+          { x: 360, y: 510, radius: 18, collected: false, floatOffset: 0 }
+        ],
+        trampolines: [], currents: [], goal: { x: 1560, y: 476, w: 64, h: 64, isOpen: false, openProgress: 0 }
+      },
+      {
+        id: 3, title: 'Nivel 3: Patrulla de Espinas', width: 1900, height: 700, playerStart: { x: 80, y: 500 },
+        platforms: [
+          { x: 0, y: 580, w: 260, h: 120, type: 'solid' }, { x: 340, y: 540, w: 380, h: 160, type: 'solid' },
+          { x: 800, y: 490, w: 420, h: 210, type: 'solid' }, { x: 1300, y: 440, w: 280, h: 30, type: 'solid' },
+          { x: 1640, y: 520, w: 260, h: 180, type: 'solid' }, { x: 260, y: 670, w: 80, h: 30, type: 'spike' },
+          { x: 720, y: 670, w: 80, h: 30, type: 'spike' }, { x: 1220, y: 670, w: 420, h: 30, type: 'spike' },
+          { x: -50, y: 0, w: 50, h: 700, type: 'solid' }, { x: 1900, y: 0, w: 50, h: 700, type: 'solid' }
+        ],
+        enemies: [
+          { x: 530, y: 518, radius: 18, type: 'patrol_h', originX: 530, originY: 518, range: 120, speed: 1.6, direction: 1, rotation: 0 },
+          { x: 1010, y: 468, radius: 18, type: 'patrol_h', originX: 1010, originY: 468, range: 140, speed: 2.0, direction: -1, rotation: 0 }
+        ],
+        pearls: [
+          { x: 180, y: 530, radius: 12, collected: false, floatOffset: 0 }, { x: 410, y: 480, radius: 12, collected: false, floatOffset: 1 },
+          { x: 650, y: 480, radius: 12, collected: false, floatOffset: 2 }, { x: 880, y: 430, radius: 12, collected: false, floatOffset: 3 },
+          { x: 1140, y: 430, radius: 12, collected: false, floatOffset: 4 }, { x: 1440, y: 380, radius: 12, collected: false, floatOffset: 5 },
+          { x: 1740, y: 460, radius: 12, collected: false, floatOffset: 6 }
+        ],
+        shields: [
+          { x: 740, y: 470, radius: 18, collected: false, floatOffset: 1 }
+        ],
+        trampolines: [], currents: [], goal: { x: 1800, y: 456, w: 64, h: 64, isOpen: false, openProgress: 0 }
+      },
+      {
+        id: 4, title: 'Nivel 4: Rocas Flotantes', width: 2000, height: 700, playerStart: { x: 80, y: 500 },
+        platforms: [
+          { x: 0, y: 580, w: 260, h: 120, type: 'solid' },
+          { x: 380, y: 520, w: 140, h: 26, type: 'moving', originX: 420, originY: 520, rangeX: 130, rangeY: 0, speed: 1.5, dx: 1, dy: 0 },
+          { x: 680, y: 480, w: 160, h: 100, type: 'solid' },
+          { x: 960, y: 450, w: 140, h: 26, type: 'moving', originX: 960, originY: 420, rangeX: 0, rangeY: 100, speed: 1.8, dx: 0, dy: 1 },
+          { x: 1220, y: 340, w: 200, h: 30, type: 'solid' },
+          { x: 1530, y: 420, w: 130, h: 26, type: 'moving', originX: 1530, originY: 420, rangeX: 80, rangeY: 60, speed: 1.6, dx: 1, dy: 1 },
+          { x: 1740, y: 500, w: 260, h: 200, type: 'solid' },
+          { x: 260, y: 680, w: 1480, h: 20, type: 'spike' },
+          { x: -50, y: 0, w: 50, h: 700, type: 'solid' }, { x: 2000, y: 0, w: 50, h: 700, type: 'solid' }
+        ],
+        enemies: [
+          { x: 760, y: 458, radius: 18, type: 'static', originX: 760, originY: 458, range: 0, speed: 0, direction: 1, rotation: 0 },
+          { x: 1320, y: 318, radius: 18, type: 'patrol_h', originX: 1320, originY: 318, range: 45, speed: 1.4, direction: 1, rotation: 0 }
+        ],
+        pearls: [
+          { x: 180, y: 530, radius: 12, collected: false, floatOffset: 0 }, { x: 420, y: 440, radius: 12, collected: false, floatOffset: 1 },
+          { x: 720, y: 420, radius: 12, collected: false, floatOffset: 2 }, { x: 960, y: 320, radius: 12, collected: false, floatOffset: 3 },
+          { x: 1250, y: 280, radius: 12, collected: false, floatOffset: 4 }, { x: 1530, y: 340, radius: 12, collected: false, floatOffset: 5 },
+          { x: 1840, y: 440, radius: 12, collected: false, floatOffset: 6 }
+        ],
+        trampolines: [], currents: [], goal: { x: 1880, y: 436, w: 64, h: 64, isOpen: false, openProgress: 0 }
+      },
+      // NIVEL 5 (SHARK INTRO)
+      {
+        id: 5, title: 'Nivel 5: Acecho del Tiburón', width: 2300, height: 700, playerStart: { x: 90, y: 500 },
+        platforms: [
+          { x: 0, y: 580, w: 240, h: 120, type: 'solid' }, { x: 560, y: 540, w: 200, h: 160, type: 'solid' },
+          { x: 1040, y: 560, w: 180, h: 140, type: 'solid' }, { x: 1200, y: 260, w: 260, h: 30, type: 'solid' },
+          { x: 1650, y: 420, w: 220, h: 30, type: 'solid' }, { x: 2000, y: 520, w: 280, h: 180, type: 'solid' },
+          { x: 240, y: 680, w: 1760, h: 20, type: 'spike' },
+          { x: -50, y: 0, w: 50, h: 700, type: 'solid' }, { x: 2300, y: 0, w: 50, h: 700, type: 'solid' }
+        ],
+        enemies: [
+          { x: 400, y: 420, radius: 24, w: 76, h: 32, type: 'shark', originX: 400, originY: 420, range: 140, speed: 2.2, direction: 1, rotation: 0 },
+          { x: 1460, y: 230, radius: 24, w: 76, h: 32, type: 'shark', originX: 1460, originY: 230, range: 120, speed: 2.5, direction: -1, rotation: 0 },
+          { x: 660, y: 518, radius: 18, type: 'static', originX: 660, originY: 518, range: 0, speed: 0, direction: 1, rotation: 0 }
+        ],
+        pearls: [
+          { x: 160, y: 530, radius: 12, collected: false, floatOffset: 0 }, { x: 400, y: 490, radius: 12, collected: false, floatOffset: 1 },
+          { x: 600, y: 480, radius: 12, collected: false, floatOffset: 2 }, { x: 900, y: 500, radius: 12, collected: false, floatOffset: 3 },
+          { x: 1120, y: 360, radius: 12, collected: false, floatOffset: 4 }, { x: 1260, y: 200, radius: 12, collected: false, floatOffset: 5 },
+          { x: 1540, y: 280, radius: 12, collected: false, floatOffset: 6 }, { x: 2100, y: 460, radius: 12, collected: false, floatOffset: 7 }
+        ],
+        shields: [
+          { x: 320, y: 430, radius: 18, collected: false, floatOffset: 1 },
+          { x: 1360, y: 220, radius: 18, collected: false, floatOffset: 3 }
+        ],
+        trampolines: [],
+        currents: [
+          { x: 240, y: 440, w: 320, h: 180, forceX: 0.65, forceY: -0.05, label: 'Corriente Rápida' },
+          { x: 1040, y: 200, w: 160, h: 360, forceX: 0.05, forceY: -0.62, label: 'Géiser Ascendente' }
+        ],
+        goal: { x: 2150, y: 456, w: 64, h: 64, isOpen: false, openProgress: 0 }
+      },
+      // NIVEL 6
+      {
+        id: 6, title: 'Nivel 6: El Jardín de Medusas', width: 2300, height: 750, playerStart: { x: 80, y: 540 },
+        platforms: [
+          { x: 0, y: 620, w: 260, h: 130, type: 'solid' }, { x: 360, y: 620, w: 220, h: 130, type: 'solid' },
+          { x: 680, y: 380, w: 240, h: 30, type: 'solid' }, { x: 1060, y: 520, w: 180, h: 230, type: 'solid' },
+          { x: 1360, y: 240, w: 240, h: 30, type: 'solid' },
+          { x: 1720, y: 360, w: 140, h: 26, type: 'moving', originX: 1720, originY: 360, rangeX: 90, rangeY: 0, speed: 2.0, dx: 1, dy: 0 },
+          { x: 2000, y: 500, w: 280, h: 250, type: 'solid' }, { x: 260, y: 720, w: 1740, h: 30, type: 'spike' },
+          { x: -50, y: 0, w: 50, h: 750, type: 'solid' }, { x: 2300, y: 0, w: 50, h: 750, type: 'solid' }
+        ],
+        enemies: [
+          { x: 880, y: 460, radius: 24, w: 76, h: 32, type: 'shark', originX: 880, originY: 460, range: 120, speed: 2.4, direction: 1, rotation: 0 },
+          { x: 1500, y: 220, radius: 24, w: 76, h: 32, type: 'shark', originX: 1500, originY: 220, range: 80, speed: 2.6, direction: -1, rotation: 0 }
+        ],
+        trampolines: [
+          { x: 440, y: 588, w: 60, h: 32, bounceForce: -14.8, squish: 1 },
+          { x: 970, y: 620, w: 60, h: 32, bounceForce: -15.5, squish: 1 },
+          { x: 1130, y: 488, w: 60, h: 32, bounceForce: -16.2, squish: 1 }
+        ],
+        currents: [],
+        pearls: [
+          { x: 180, y: 560, radius: 12, collected: false, floatOffset: 0 }, { x: 470, y: 420, radius: 12, collected: false, floatOffset: 1 },
+          { x: 740, y: 320, radius: 12, collected: false, floatOffset: 2 }, { x: 1000, y: 450, radius: 12, collected: false, floatOffset: 3 },
+          { x: 1240, y: 160, radius: 12, collected: false, floatOffset: 4 }, { x: 1760, y: 300, radius: 12, collected: false, floatOffset: 5 },
+          { x: 2120, y: 440, radius: 12, collected: false, floatOffset: 6 }
+        ],
+        goal: { x: 2150, y: 436, w: 64, h: 64, isOpen: false, openProgress: 0 }
+      },
+      // NIVEL 7
+      {
+        id: 7, title: 'Nivel 7: Agujas del Abismo', width: 2400, height: 700, playerStart: { x: 80, y: 500 },
+        platforms: [
+          { x: 0, y: 580, w: 200, h: 120, type: 'solid' }, { x: 290, y: 530, w: 60, h: 170, type: 'solid' },
+          { x: 450, y: 470, w: 60, h: 230, type: 'solid' }, { x: 610, y: 420, w: 65, h: 280, type: 'solid' },
+          { x: 780, y: 470, w: 70, h: 230, type: 'solid' }, { x: 960, y: 520, w: 60, h: 180, type: 'solid' },
+          { x: 1140, y: 460, w: 160, h: 240, type: 'solid' }, { x: 1400, y: 400, w: 65, h: 300, type: 'solid' },
+          { x: 1570, y: 360, w: 65, h: 340, type: 'solid' }, { x: 1740, y: 420, w: 65, h: 280, type: 'solid' },
+          { x: 1910, y: 480, w: 65, h: 220, type: 'solid' }, { x: 2120, y: 520, w: 260, h: 180, type: 'solid' },
+          { x: 200, y: 670, w: 1920, h: 30, type: 'spike' }, { x: -50, y: 0, w: 50, h: 700, type: 'solid' },
+          { x: 2400, y: 0, w: 50, h: 700, type: 'solid' }
+        ],
+        enemies: [
+          { x: 450, y: 350, radius: 24, w: 76, h: 32, type: 'shark', originX: 450, originY: 350, range: 130, speed: 2.3, direction: 1, rotation: 0 },
+          { x: 1650, y: 270, radius: 24, w: 76, h: 32, type: 'shark', originX: 1650, originY: 270, range: 140, speed: 2.6, direction: -1, rotation: 0 }
+        ],
+        pearls: [
+          { x: 140, y: 530, radius: 12, collected: false, floatOffset: 0 }, { x: 320, y: 470, radius: 12, collected: false, floatOffset: 1 },
+          { x: 480, y: 410, radius: 12, collected: false, floatOffset: 2 }, { x: 642, y: 360, radius: 12, collected: false, floatOffset: 3 },
+          { x: 815, y: 410, radius: 12, collected: false, floatOffset: 4 }, { x: 1432, y: 340, radius: 12, collected: false, floatOffset: 5 },
+          { x: 1942, y: 420, radius: 12, collected: false, floatOffset: 6 }
+        ],
+        trampolines: [], currents: [], goal: { x: 2240, y: 456, w: 64, h: 64, isOpen: false, openProgress: 0 }
+      },
+      // NIVEL 8
+      {
+        id: 8, title: 'Nivel 8: Corales Quebradizos', width: 2400, height: 700, playerStart: { x: 80, y: 500 },
+        platforms: [
+          { x: 0, y: 580, w: 220, h: 120, type: 'solid' },
+          { x: 300, y: 530, w: 90, h: 24, type: 'crumble', maxCrumbleTime: 60, color: '#e879f9' },
+          { x: 460, y: 490, w: 90, h: 24, type: 'crumble', maxCrumbleTime: 60, color: '#e879f9' },
+          { x: 620, y: 450, w: 90, h: 24, type: 'crumble', maxCrumbleTime: 60, color: '#e879f9' },
+          { x: 790, y: 450, w: 140, h: 250, type: 'solid' },
+          { x: 1000, y: 420, w: 85, h: 24, type: 'crumble', maxCrumbleTime: 50, color: '#f472b6' },
+          { x: 1150, y: 390, w: 85, h: 24, type: 'crumble', maxCrumbleTime: 50, color: '#f472b6' },
+          { x: 1300, y: 360, w: 85, h: 24, type: 'crumble', maxCrumbleTime: 50, color: '#f472b6' },
+          { x: 1450, y: 340, w: 85, h: 24, type: 'crumble', maxCrumbleTime: 50, color: '#f472b6' },
+          { x: 1610, y: 380, w: 130, h: 320, type: 'solid' },
+          { x: 1810, y: 420, w: 85, h: 24, type: 'crumble', maxCrumbleTime: 55, color: '#f472b6' },
+          { x: 1960, y: 470, w: 85, h: 24, type: 'crumble', maxCrumbleTime: 55, color: '#f472b6' },
+          { x: 2150, y: 520, w: 220, h: 180, type: 'solid' },
+          { x: 220, y: 670, w: 1930, h: 30, type: 'spike' },
+          { x: -50, y: 0, w: 50, h: 700, type: 'solid' }, { x: 2400, y: 0, w: 50, h: 700, type: 'solid' }
+        ],
+        enemies: [
+          { x: 500, y: 580, radius: 24, w: 76, h: 32, type: 'shark', originX: 500, originY: 580, range: 160, speed: 2.5, direction: -1, rotation: 0 },
+          { x: 1250, y: 490, radius: 24, w: 76, h: 32, type: 'shark', originX: 1250, originY: 490, range: 150, speed: 2.7, direction: 1, rotation: 0 }
+        ],
+        pearls: [
+          { x: 160, y: 530, radius: 12, collected: false, floatOffset: 0 }, { x: 345, y: 470, radius: 12, collected: false, floatOffset: 1 },
+          { x: 505, y: 430, radius: 12, collected: false, floatOffset: 2 }, { x: 1042, y: 360, radius: 12, collected: false, floatOffset: 3 },
+          { x: 1492, y: 280, radius: 12, collected: false, floatOffset: 4 }, { x: 1852, y: 360, radius: 12, collected: false, floatOffset: 5 },
+          { x: 2240, y: 460, radius: 12, collected: false, floatOffset: 6 }
+        ],
+        trampolines: [], currents: [], goal: { x: 2260, y: 456, w: 64, h: 64, isOpen: false, openProgress: 0 }
+      },
+      // NIVEL 9 (MEGALODON)
+      {
+        id: 9, title: 'Nivel 9: La Fosa del Megalodón', width: 2600, height: 800, playerStart: { x: 80, y: 640 },
+        platforms: [
+          { x: 0, y: 720, w: 260, h: 80, type: 'solid' }, { x: 380, y: 700, w: 120, h: 100, type: 'solid' },
+          { x: 620, y: 680, w: 140, h: 120, type: 'solid' }, { x: 220, y: 480, w: 460, h: 30, type: 'solid' },
+          { x: 780, y: 440, w: 320, h: 30, type: 'solid' }, { x: 440, y: 260, w: 240, h: 30, type: 'solid' },
+          { x: 820, y: 220, w: 260, h: 30, type: 'moving', originX: 880, originY: 220, rangeX: 120, rangeY: 0, speed: 2.2, dx: 1, dy: 0 },
+          { x: 1200, y: 200, w: 35, h: 420, type: 'solid' },
+          { x: 1320, y: 320, w: 85, h: 24, type: 'crumble', maxCrumbleTime: 55, color: '#f472b6' },
+          { x: 1480, y: 380, w: 85, h: 24, type: 'crumble', maxCrumbleTime: 55, color: '#f472b6' },
+          { x: 1640, y: 440, w: 85, h: 24, type: 'moving', originX: 1640, originY: 440, rangeX: 0, rangeY: 110, speed: 2.0, dx: 0, dy: 1 },
+          { x: 1900, y: 520, w: 220, h: 30, type: 'solid' }, { x: 2260, y: 580, w: 300, h: 220, type: 'solid' },
+          { x: 260, y: 780, w: 2000, h: 20, type: 'spike' }, { x: -50, y: 0, w: 50, h: 800, type: 'solid' },
+          { x: 2600, y: 0, w: 50, h: 800, type: 'solid' }
+        ],
+        enemies: [
+          { x: 1050, y: 640, radius: 46, w: 150, h: 60, type: 'megalodon', originX: 1050, originY: 640, range: 220, speed: 3.2, direction: 1, rotation: 0 },
+          { x: 1540, y: 320, radius: 24, w: 76, h: 32, type: 'shark', originX: 1540, originY: 320, range: 120, speed: 2.6, direction: -1, rotation: 0 }
+        ],
+        trampolines: [
+          { x: 150, y: 688, w: 60, h: 32, bounceForce: -16.5, squish: 1 },
+          { x: 300, y: 448, w: 60, h: 32, bounceForce: -15.8, squish: 1 }
+        ],
+        currents: [
+          { x: 1080, y: 140, w: 260, h: 140, forceX: 0.65, forceY: -0.05, label: 'Chorro Superior' }
+        ],
+        pearls: [
+          { x: 200, y: 580, radius: 12, collected: false, floatOffset: 0 }, { x: 540, y: 200, radius: 12, collected: false, floatOffset: 1 },
+          { x: 980, y: 160, radius: 12, collected: false, floatOffset: 2 }, { x: 1360, y: 260, radius: 12, collected: false, floatOffset: 3 },
+          { x: 1800, y: 500, radius: 12, collected: false, floatOffset: 4 }, { x: 2380, y: 520, radius: 12, collected: false, floatOffset: 5 }
+        ],
+        goal: { x: 2460, y: 516, w: 64, h: 64, isOpen: false, openProgress: 0 }
+      },
+      // NIVEL 10 (MEGALODON SUPREMO)
+      {
+        id: 10, title: 'Nivel 10: La Cripta del Megalodón', width: 2800, height: 800, playerStart: { x: 80, y: 640 },
+        platforms: [
+          { x: 0, y: 720, w: 240, h: 80, type: 'solid' },
+          { x: 300, y: 670, w: 80, h: 24, type: 'crumble', maxCrumbleTime: 48, color: '#f472b6' },
+          { x: 440, y: 630, w: 80, h: 24, type: 'crumble', maxCrumbleTime: 48, color: '#f472b6' },
+          { x: 600, y: 590, w: 120, h: 26, type: 'moving', originX: 660, originY: 590, rangeX: 110, rangeY: 0, speed: 2.4, dx: 1, dy: 0 },
+          { x: 880, y: 530, w: 160, h: 270, type: 'solid' },
+          { x: 1100, y: 470, w: 80, h: 24, type: 'crumble', maxCrumbleTime: 50, color: '#f472b6' },
+          { x: 1240, y: 420, w: 80, h: 24, type: 'crumble', maxCrumbleTime: 50, color: '#f472b6' },
+          { x: 1380, y: 370, w: 80, h: 24, type: 'crumble', maxCrumbleTime: 50, color: '#f472b6' },
+          { x: 1540, y: 330, w: 160, h: 470, type: 'solid' },
+          { x: 1800, y: 440, w: 110, h: 26, type: 'moving', originX: 1800, originY: 400, rangeX: 0, rangeY: 130, speed: 2.8, dx: 0, dy: 1 },
+          { x: 2010, y: 420, w: 70, h: 380, type: 'solid' },
+          { x: 2480, y: 480, w: 320, h: 320, type: 'solid' },
+          { x: 240, y: 780, w: 2240, h: 20, type: 'spike' },
+          { x: -50, y: 0, w: 50, h: 800, type: 'solid' }, { x: 2800, y: 0, w: 50, h: 800, type: 'solid' }
+        ],
+        enemies: [
+          { x: 520, y: 530, radius: 24, w: 76, h: 32, type: 'shark', originX: 520, originY: 530, range: 130, speed: 2.4, direction: 1, rotation: 0 },
+          { x: 1260, y: 310, radius: 24, w: 76, h: 32, type: 'shark', originX: 1260, originY: 310, range: 120, speed: 2.8, direction: -1, rotation: 0 },
+          { x: 2220, y: 420, radius: 50, w: 165, h: 68, type: 'megalodon', originX: 2220, originY: 420, range: 180, speed: 3.5, direction: -1, rotation: 0 }
+        ],
+        trampolines: [
+          { x: 1640, y: 298, w: 60, h: 32, bounceForce: -17.2, squish: 1 },
+          { x: 2015, y: 388, w: 60, h: 32, bounceForce: -16.5, squish: 1 }
+        ],
+        currents: [
+          { x: 1660, y: 120, w: 380, h: 240, forceX: 0.72, forceY: -0.15, label: 'Super Corriente Abisal' },
+          { x: 2200, y: 260, w: 200, h: 320, forceX: 0.45, forceY: -0.45, label: 'Remolino Ascendente' }
+        ],
+        pearls: [
+          { x: 150, y: 660, radius: 12, collected: false, floatOffset: 0 }, { x: 670, y: 520, radius: 12, collected: false, floatOffset: 1 },
+          { x: 920, y: 460, radius: 12, collected: false, floatOffset: 2 }, { x: 1420, y: 300, radius: 12, collected: false, floatOffset: 3 },
+          { x: 1780, y: 150, radius: 12, collected: false, floatOffset: 4 }, { x: 2360, y: 320, radius: 12, collected: false, floatOffset: 5 },
+          { x: 2600, y: 420, radius: 12, collected: false, floatOffset: 6 }
+        ],
+        goal: { x: 2670, y: 416, w: 64, h: 64, isOpen: false, openProgress: 0 }
+      }
+    ];
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let currentLevelIndex = 0;
+    let unlockedLevel = 1;
+    let lives = 3;
+    let pearlsCollected = 0;
+    let totalPearlsAllLevels = 0;
+    let currentLevel = null;
+    let gameState = 'menu';
+    let globalTime = 0;
+    let screenShake = 0;
+
+    const player = {
+      x: 100, y: 500, vx: 0, vy: 0, radius: 22,
+      isGrounded: false, facing: 1, rotation: 0,
+      scaleX: 1, scaleY: 1, invulnerableTimer: 0, blinkTimer: 0,
+      hasShield: false, shieldTimer: 0
+    };
+
+    const camera = { x: 0, y: 0 };
+    const inputs = { left: false, right: false, jump: false };
+    let jumpKeyHeld = false;
+    let particles = [];
+
+    function loadLevel(idx) {
+      currentLevelIndex = Math.max(0, Math.min(idx, LEVELS.length - 1));
+      currentLevel = JSON.parse(JSON.stringify(LEVELS[currentLevelIndex]));
+      pearlsCollected = 0;
+
+      player.x = currentLevel.playerStart.x;
+      player.y = currentLevel.playerStart.y;
+      player.vx = 0; player.vy = 0;
+      player.isGrounded = false;
+      player.scaleX = 1; player.scaleY = 1;
+      player.invulnerableTimer = 0;
+      player.rotation = 0;
+      player.hasShield = false;
+      player.shieldTimer = 0;
+
+      camera.x = player.x - canvas.width / 2;
+      camera.y = player.y - canvas.height / 2;
+      updateHUD();
+    }
+
+    function updateHUD() {
+      document.getElementById('hud-level-text').textContent = `Nivel ${currentLevelIndex + 1}/10`;
+      document.getElementById('hud-pearls-text').textContent = `${pearlsCollected} / ${currentLevel ? currentLevel.pearls.length : 0}`;
+      document.getElementById('hud-diff-badge').textContent = DIFF_CONFIGS[selectedDiff].label;
+
+      let heartsStr = '';
+      const maxL = DIFF_CONFIGS[selectedDiff].lives;
+      for (let i = 0; i < maxL; i++) {
+        heartsStr += i < lives ? '❤️' : '🖤';
+      }
+      document.getElementById('hud-hearts').textContent = heartsStr;
+
+      const shieldCard = document.getElementById('hud-shield');
+      if (shieldCard) {
+        if (player.hasShield) {
+          shieldCard.style.display = 'flex';
+          document.getElementById('hud-shield-text').textContent = `ESCUDO: ${player.shieldTimer.toFixed(1)}s`;
+        } else {
+          shieldCard.style.display = 'none';
+        }
+      }
+    }
+
+    function setScreen(screenName) {
+      document.querySelectorAll('.screen-overlay').forEach(el => el.classList.remove('active'));
+      gameState = screenName;
+      if (screenName === 'menu') {
+        document.getElementById('screen-start').classList.add('active');
+      } else if (screenName === 'levels') {
+        renderLevelGrid();
+        document.getElementById('screen-levels').classList.add('active');
+      } else if (screenName === 'complete') {
+        document.getElementById('complete-pearls-count').textContent = `${pearlsCollected} / ${currentLevel.pearls.length}`;
+        document.getElementById('screen-complete').classList.add('active');
+      } else if (screenName === 'gameover') {
+        document.getElementById('screen-gameover').classList.add('active');
+      } else if (screenName === 'victory') {
+        document.getElementById('victory-pearls').textContent = totalPearlsAllLevels;
+        document.getElementById('screen-victory').classList.add('active');
+      }
+    }
+
+    function renderLevelGrid() {
+      const container = document.getElementById('level-grid-container');
+      container.innerHTML = '';
+      LEVELS.forEach((lvl, i) => {
+        const btn = document.createElement('button');
+        btn.className = `level-card-btn ${i < unlockedLevel ? '' : 'locked'}`;
+        const hasM = lvl.enemies && lvl.enemies.some(e => e.type === 'megalodon');
+        const hasS = lvl.enemies && lvl.enemies.some(e => e.type === 'shark');
+        btn.innerHTML = `<div>${i + 1}</div><div style="font-size:10px;">${i < unlockedLevel ? (hasM ? '🦈👑' : hasS ? '🦈' : '⚪') : '🔒'}</div>`;
+        if (i < unlockedLevel) {
+          btn.onclick = () => { loadLevel(i); setScreen('playing'); };
+        }
+        container.appendChild(btn);
+      });
+    }
+
+    function emitSparkles(x, y, count, color) {
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const spd = 1.5 + Math.random() * 3.5;
+        particles.push({
+          x, y, vx: Math.cos(angle) * spd, vy: Math.sin(angle) * spd,
+          size: 3 + Math.random() * 3, color, alpha: 1, life: 0, maxLife: 0.5
+        });
+      }
+    }
+
+    let lastTime = performance.now();
+    function gameLoop(now) {
+      const dt = Math.min((now - lastTime) / 1000, 0.05);
+      lastTime = now;
+      globalTime += dt;
+
+      if (gameState === 'playing') updateGame(dt);
+      renderGame();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function updateGame(dt) {
+      if (screenShake > 0) screenShake = Math.max(0, screenShake - dt * 25);
+      const diff = DIFF_CONFIGS[selectedDiff];
+
+      // Platforms
+      currentLevel.platforms.forEach(p => {
+        if (p.type === 'moving') {
+          const spd = (p.speed || 1.5) * diff.speedMult;
+          if (p.rangeX) p.x = p.originX + Math.sin(globalTime * spd) * p.rangeX;
+          if (p.rangeY) p.y = p.originY + Math.cos(globalTime * spd) * p.rangeY;
+        }
+        if (p.type === 'crumble') {
+          if (p.isCrumbling && !p.isBroken) {
+            p.crumbleTimer -= dt * 60;
+            if (p.crumbleTimer <= 0) {
+              p.isBroken = true; p.isCrumbling = false; p.respawnTimer = 180;
+              Sound.crumble();
+            }
+          } else if (p.isBroken) {
+            p.respawnTimer -= dt * 60;
+            if (p.respawnTimer <= 0) {
+              p.isBroken = false;
+              p.crumbleTimer = p.maxCrumbleTime || 60;
+            }
+          }
+        }
+      });
+
+      // Enemies (Urchin, Shark, Megalodon)
+      currentLevel.enemies.forEach(e => {
+        e.rotation += dt * 1.8;
+        const swimSpd = (e.speed || 1.8) * diff.speedMult;
+
+        if (e.type === 'shark' || e.type === 'megalodon') {
+          e.x += swimSpd * e.direction;
+          e.jawAngle = Math.abs(Math.sin(globalTime * 6)) * 0.35;
+          e.tailAngle = Math.sin(globalTime * 8) * 0.45;
+          if (e.x > e.originX + e.range) e.direction = -1;
+          else if (e.x < e.originX - e.range) e.direction = 1;
+        } else if (e.type === 'patrol_h') {
+          e.x += swimSpd * e.direction;
+          if (e.x > e.originX + e.range) e.direction = -1;
+          else if (e.x < e.originX - e.range) e.direction = 1;
+        }
+      });
+
+      // Trampolines
+      currentLevel.trampolines.forEach(j => {
+        if (j.squish < 1) j.squish = Math.min(1, j.squish + dt * 4);
+      });
+
+      // Currents
+      currentLevel.currents.forEach(c => {
+        if (
+          player.x + player.radius > c.x && player.x - player.radius < c.x + c.w &&
+          player.y + player.radius > c.y && player.y - player.radius < c.y + c.h
+        ) {
+          player.vx += c.forceX;
+          player.vy += c.forceY;
+        }
+      });
+
+      // Player
+      if (player.hasShield) {
+        player.shieldTimer -= dt;
+        if (player.shieldTimer <= 0) {
+          player.hasShield = false;
+          player.shieldTimer = 0;
+          Sound.shieldBreak();
+        }
+        updateHUD();
+      }
+
+      if (player.invulnerableTimer > 0) {
+        player.invulnerableTimer -= dt;
+        player.blinkTimer += dt * 15;
+      }
+
+      const accel = player.isGrounded ? 0.58 : 0.42;
+      const maxSpd = 5.4;
+      if (inputs.left) { player.vx -= accel; player.facing = -1; }
+      else if (inputs.right) { player.vx += accel; player.facing = 1; }
+      else { player.vx *= player.isGrounded ? 0.86 : 0.94; }
+
+      player.vx = Math.max(-maxSpd, Math.min(maxSpd, player.vx));
+
+      if (inputs.jump && player.isGrounded && !jumpKeyHeld) {
+        player.vy = -10.2;
+        player.isGrounded = false;
+        player.scaleY = 1.25; player.scaleX = 0.8;
+        jumpKeyHeld = true;
+        Sound.jump();
+      }
+      if (!inputs.jump && player.vy < -3.5) player.vy *= 0.65;
+
+      player.vy += diff.grav;
+      player.vy = Math.min(10.5, player.vy);
+      player.rotation += (player.vx / player.radius) * 0.75;
+      player.scaleX += (1 - player.scaleX) * 0.15;
+      player.scaleY += (1 - player.scaleY) * 0.15;
+
+      player.x += player.vx;
+      player.y += player.vy;
+
+      if (player.x - player.radius < 0) { player.x = player.radius; player.vx = 0; }
+      if (player.x + player.radius > currentLevel.width) { player.x = currentLevel.width - player.radius; player.vx = 0; }
+      if (player.y - player.radius > currentLevel.height + 60) takeDamage(lives, 'pit');
+
+      resolveCollisions();
+      checkHazards();
+      checkShields();
+      checkPearls();
+      checkGoal(dt);
+
+      // Camera
+      const targetCamX = player.x - canvas.width / 2 + player.vx * 15;
+      const targetCamY = player.y - canvas.height / 2;
+      camera.x += (targetCamX - camera.x) * 0.08;
+      camera.y += (targetCamY - camera.y) * 0.08;
+      camera.x = Math.max(0, Math.min(currentLevel.width - canvas.width, camera.x));
+      camera.y = Math.max(0, Math.min(currentLevel.height - canvas.height, camera.y));
+    }
+
+    function resolveCollisions() {
+      player.isGrounded = false;
+      currentLevel.trampolines.forEach(j => {
+        if (
+          player.x + player.radius * 0.7 > j.x && player.x - player.radius * 0.7 < j.x + j.w &&
+          player.y + player.radius >= j.y && player.y - player.radius <= j.y + j.h && player.vy > 0
+        ) {
+          player.y = j.y - player.radius;
+          player.vy = j.bounceForce;
+          j.squish = 0.45;
+          player.scaleY = 1.35; player.scaleX = 0.75;
+          Sound.bounce();
+        }
+      });
+
+      currentLevel.platforms.forEach(plat => {
+        if (plat.type === 'spike' || (plat.type === 'crumble' && plat.isBroken)) return;
+        const closestX = Math.max(plat.x, Math.min(player.x, plat.x + plat.w));
+        const closestY = Math.max(plat.y, Math.min(player.y, plat.y + plat.h));
+        const distX = player.x - closestX;
+        const distY = player.y - closestY;
+        const distSq = distX * distX + distY * distY;
+
+        if (distSq < player.radius * player.radius) {
+          const dist = Math.sqrt(distSq);
+          const overlap = player.radius - dist;
+          const nx = dist > 0.0001 ? distX / dist : 0;
+          const ny = dist > 0.0001 ? distY / dist : -1;
+
+          player.x += nx * overlap;
+          player.y += ny * overlap;
+
+          if (ny < -0.6) {
+            player.isGrounded = true;
+            if (player.vy > 4) { player.scaleY = 0.75; player.scaleX = 1.25; }
+            player.vy = 0;
+            if (plat.type === 'crumble' && !plat.isCrumbling) {
+              plat.isCrumbling = true;
+              plat.crumbleTimer = plat.maxCrumbleTime || 60;
+            }
+          } else if (ny > 0.6 && player.vy < 0) {
+            player.vy = 0;
+          } else {
+            player.vx = 0;
+          }
+        }
+      });
+    }
+
+    function checkHazards() {
+      if (player.invulnerableTimer > 0) return;
+      currentLevel.platforms.forEach(plat => {
+        if (plat.type === 'spike') {
+          if (
+            player.x + player.radius * 0.7 > plat.x && player.x - player.radius * 0.7 < plat.x + plat.w &&
+            player.y + player.radius * 0.7 > plat.y && player.y - player.radius * 0.7 < plat.y + plat.h
+          ) {
+            if (player.hasShield) {
+              player.hasShield = false;
+              player.shieldTimer = 0;
+              player.invulnerableTimer = 1.8;
+              screenShake = 10;
+              Sound.shieldBreak();
+              emitSparkles(player.x, player.y, 22, '#38bdf8');
+              player.vy = -8.5;
+              updateHUD();
+              return;
+            }
+            takeDamage(1, 'spike');
+          }
+        }
+      });
+
+      currentLevel.enemies.forEach(e => {
+        if (e.type === 'shark' || e.type === 'megalodon') {
+          const hw = (e.w || 76) * 0.45;
+          const hh = (e.h || 32) * 0.45;
+          if (Math.abs(player.x - e.x) < hw + player.radius && Math.abs(player.y - e.y) < hh + player.radius) {
+            if (player.hasShield) {
+              player.hasShield = false;
+              player.shieldTimer = 0;
+              player.invulnerableTimer = 1.8;
+              screenShake = 10;
+              Sound.shieldBreak();
+              emitSparkles(player.x, player.y, 22, '#38bdf8');
+              player.vx = e.direction * 7.5;
+              player.vy = -6.5;
+              updateHUD();
+              return;
+            }
+            const dmg = e.type === 'megalodon' ? 2 : 1;
+            takeDamage(dmg, e.type);
+            player.vx = e.direction * 7.5;
+            player.vy = -6.5;
+          }
+        } else {
+          const dx = player.x - e.x;
+          const dy = player.y - e.y;
+          if (Math.hypot(dx, dy) < player.radius + e.radius - 3) {
+            if (player.hasShield) {
+              player.hasShield = false;
+              player.shieldTimer = 0;
+              player.invulnerableTimer = 1.8;
+              screenShake = 10;
+              Sound.shieldBreak();
+              emitSparkles(player.x, player.y, 22, '#38bdf8');
+              player.vx = (dx / (Math.hypot(dx, dy) || 1)) * 6.5;
+              player.vy = -6.0;
+              updateHUD();
+              return;
+            }
+            takeDamage(1, 'urchin');
+            player.vx = (dx / (Math.hypot(dx, dy) || 1)) * 6.5;
+            player.vy = -6.0;
+          }
+        }
+      });
+    }
+
+    function checkShields() {
+      if (!currentLevel.shields) return;
+      currentLevel.shields.forEach(sh => {
+        if (!sh.collected) {
+          if (Math.hypot(player.x - sh.x, player.y - sh.y) < player.radius + sh.radius + 8) {
+            sh.collected = true;
+            player.hasShield = true;
+            player.shieldTimer = 10.0;
+            Sound.shieldCollect();
+            emitSparkles(sh.x, sh.y, 22, '#38bdf8');
+            updateHUD();
+          }
+        }
+      });
+    }
+
+    function takeDamage(dmg, src) {
+      lives -= dmg;
+      screenShake = src === 'megalodon' ? 18 : 12;
+      if (src === 'megalodon') Sound.roar();
+      else if (src === 'shark') Sound.chomp();
+      else Sound.chomp();
+
+      emitSparkles(player.x, player.y, 14, '#ff2a7a');
+      updateHUD();
+      if (lives <= 0) {
+        setScreen('gameover');
+      } else {
+        player.invulnerableTimer = 1.6;
+      }
+    }
+
+    function checkPearls() {
+      currentLevel.pearls.forEach(pr => {
+        if (!pr.collected) {
+          if (Math.hypot(player.x - pr.x, player.y - pr.y) < player.radius + pr.radius + 6) {
+            pr.collected = true;
+            pearlsCollected++;
+            totalPearlsAllLevels++;
+            Sound.pearl();
+            emitSparkles(pr.x, pr.y, 14, '#fde047');
+            updateHUD();
+          }
+        }
+      });
+    }
+
+    function checkGoal(dt) {
+      const g = currentLevel.goal;
+      if (
+        player.x + player.radius > g.x && player.x - player.radius < g.x + g.w &&
+        player.y + player.radius > g.y && player.y - player.radius < g.y + g.h
+      ) {
+        if (!g.isOpen) { g.isOpen = true; Sound.win(); }
+      }
+      if (g.isOpen) {
+        g.openProgress = Math.min(1, g.openProgress + dt * 2.5);
+        if (g.openProgress >= 1 && gameState === 'playing') {
+          if (currentLevelIndex + 1 < LEVELS.length) {
+            unlockedLevel = Math.max(unlockedLevel, currentLevelIndex + 2);
+            setScreen('complete');
+          } else {
+            setScreen('victory');
+          }
+        }
+      }
+    }
+
+    function renderGame() {
+      ctx.save();
+      if (screenShake > 0) ctx.translate((Math.random() - 0.5) * screenShake, (Math.random() - 0.5) * screenShake);
+
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      bgGrad.addColorStop(0, '#0c2444'); bgGrad.addColorStop(0.5, '#07162c'); bgGrad.addColorStop(1, '#020712');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (!currentLevel) { ctx.restore(); return; }
+
+      ctx.save();
+      ctx.translate(-Math.floor(camera.x), -Math.floor(camera.y));
+
+      // Platforms
+      currentLevel.platforms.forEach(p => {
+        if (p.type === 'spike') {
+          ctx.fillStyle = '#dc2626';
+          const cnt = Math.floor(p.w / 18);
+          for (let i = 0; i < cnt; i++) {
+            ctx.beginPath();
+            ctx.moveTo(p.x + i * 18, p.y + p.h);
+            ctx.lineTo(p.x + i * 18 + 9, p.y);
+            ctx.lineTo(p.x + (i + 1) * 18, p.y + p.h);
+            ctx.fill();
+          }
+          return;
+        }
+        if (p.type === 'crumble' && p.isBroken) return;
+        ctx.fillStyle = p.type === 'crumble' ? '#f472b6' : (p.type === 'moving' ? '#0284c7' : '#155e75');
+        ctx.beginPath();
+        ctx.roundRect(p.x, p.y, p.w, p.h, 6);
+        ctx.fill();
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(p.x, p.y, p.w, 4);
+      });
+
+      // Trampolines
+      currentLevel.trampolines.forEach(j => {
+        ctx.save();
+        ctx.translate(j.x + j.w / 2, j.y + j.h / 2);
+        ctx.scale(1 / j.squish, j.squish);
+        ctx.fillStyle = '#ec4899';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, j.w / 2, j.h / 2, 0, Math.PI, 0, false);
+        ctx.fill();
+        ctx.strokeStyle = '#67e8f9';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.restore();
+      });
+
+      // Pearls
+      currentLevel.pearls.forEach(pr => {
+        if (pr.collected) return;
+        const fy = pr.y + Math.sin(globalTime * 3 + pr.floatOffset) * 6;
+        ctx.fillStyle = '#fef08a';
+        ctx.beginPath();
+        ctx.arc(pr.x, fy, pr.radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Shields
+      if (currentLevel.shields) {
+        currentLevel.shields.forEach(sh => {
+          if (sh.collected) return;
+          const fy = sh.y + Math.sin(globalTime * 3.2 + (sh.floatOffset || 0)) * 7;
+          ctx.save();
+          const ag = ctx.createRadialGradient(sh.x, fy, 2, sh.x, fy, sh.radius * 2.2);
+          ag.addColorStop(0, 'rgba(56, 189, 248, 0.5)');
+          ag.addColorStop(1, 'transparent');
+          ctx.fillStyle = ag;
+          ctx.beginPath();
+          ctx.arc(sh.x, fy, sh.radius * 2.2, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = 'rgba(56, 189, 248, 0.65)';
+          ctx.beginPath();
+          ctx.arc(sh.x, fy, sh.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#e0f2fe';
+          ctx.lineWidth = 1.8;
+          ctx.stroke();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.moveTo(sh.x, fy - 6);
+          ctx.lineTo(sh.x + 5, fy - 3);
+          ctx.lineTo(sh.x + 4, fy + 3);
+          ctx.lineTo(sh.x, fy + 7);
+          ctx.lineTo(sh.x - 4, fy + 3);
+          ctx.lineTo(sh.x - 5, fy - 3);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+          ctx.beginPath();
+          ctx.ellipse(sh.x - sh.radius * 0.35, fy - sh.radius * 0.35, sh.radius * 0.35, sh.radius * 0.12, -Math.PI / 4, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#38bdf8';
+          ctx.font = 'bold 9px sans-serif';
+          ctx.fillText('ESCUDO', sh.x - 18, fy - sh.radius - 5);
+          ctx.restore();
+        });
+      }
+
+      // Goal Chest
+      const g = currentLevel.goal;
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(g.x + 4, g.y + 24, g.w - 8, g.h - 24);
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillRect(g.x + 4, g.y + 24, 8, g.h - 24);
+      ctx.fillRect(g.x + g.w - 12, g.y + 24, 8, g.h - 24);
+
+      // Enemies (Urchins, Shark, Megalodon)
+      currentLevel.enemies.forEach(e => {
+        ctx.save();
+        ctx.translate(e.x, e.y);
+        ctx.scale(e.direction, 1);
+
+        if (e.type === 'shark') {
+          // Shark Drawing
+          const w = e.w || 76;
+          const h = e.h || 32;
+          ctx.fillStyle = '#334155';
+          ctx.beginPath();
+          ctx.ellipse(0, 0, w / 2, h / 2, 0, 0, Math.PI * 2);
+          ctx.fill();
+          // Dorsal fin
+          ctx.beginPath();
+          ctx.moveTo(-5, -h / 2);
+          ctx.lineTo(-15, -h * 1.1);
+          ctx.lineTo(-25, -h / 2);
+          ctx.fill();
+          // Teeth
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(w * 0.25, 0, 6, 4);
+        } else if (e.type === 'megalodon') {
+          // Megalodon Giant Drawing
+          const w = e.w || 150;
+          const h = e.h || 60;
+          ctx.fillStyle = '#0f172a';
+          ctx.beginPath();
+          ctx.ellipse(0, 0, w / 2, h / 2, 0, 0, Math.PI * 2);
+          ctx.fill();
+          // Colossal Dorsal fin
+          ctx.beginPath();
+          ctx.moveTo(-10, -h / 2);
+          ctx.lineTo(-25, -h * 1.25);
+          ctx.lineTo(-45, -h / 2);
+          ctx.fill();
+          // Glowing red eye
+          ctx.fillStyle = '#ef4444';
+          ctx.beginPath();
+          ctx.arc(w * 0.28, -h * 0.15, 6, 0, Math.PI * 2);
+          ctx.fill();
+          // Giant teeth
+          ctx.fillStyle = '#fff';
+          for (let k = 0; k < 5; k++) ctx.fillRect(w * 0.15 + k * 8, 2, 6, 6);
+        } else {
+          // Urchin
+          ctx.rotate(e.rotation);
+          ctx.fillStyle = '#0f172a';
+          for (let i = 0; i < 8; i++) {
+            const a = (Math.PI * 2 * i) / 8;
+            ctx.beginPath();
+            ctx.arc(Math.cos(a) * e.radius, Math.sin(a) * e.radius, 4, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.fillStyle = '#831843';
+          ctx.beginPath();
+          ctx.arc(0, 0, e.radius * 0.7, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      });
+
+      // Player in selected color
+      const pal = PALETTES[selectedColor];
+      ctx.save();
+      ctx.translate(player.x, player.y);
+      if (player.invulnerableTimer > 0 && Math.sin(player.blinkTimer) > 0) ctx.globalAlpha = 0.35;
+      ctx.scale(player.scaleX * player.facing, player.scaleY);
+
+      // Tentacles
+      for (let i = 0; i < 4; i++) {
+        const ox = -14 + i * 9.5;
+        const sway = Math.sin(globalTime * 6 + i * 1.5) * 5;
+        ctx.fillStyle = pal.warmth;
+        ctx.beginPath();
+        ctx.arc(ox + sway, player.radius + 8, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Ball Body
+      const bodyGrad = ctx.createRadialGradient(-6, -6, 2, 0, 0, player.radius);
+      bodyGrad.addColorStop(0, pal.primary);
+      bodyGrad.addColorStop(0.6, pal.mid);
+      bodyGrad.addColorStop(1, pal.warmth);
+      ctx.fillStyle = bodyGrad;
+      ctx.beginPath();
+      ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Curl
+      ctx.strokeStyle = pal.curls;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(2, -player.radius - 8, 6, 0, Math.PI * 1.6);
+      ctx.stroke();
+
+      // Cheeks
+      ctx.fillStyle = pal.cheek;
+      ctx.beginPath();
+      ctx.arc(-11, 4, 5, 0, Math.PI * 2);
+      ctx.arc(11, 4, 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Eyes
+      [-8.5, 8.5].forEach(ex => {
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(ex, -1, 6.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.arc(ex + player.vx * 0.2, -1 + player.vy * 0.15, 4.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(ex - 1.5, -2.5, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Smile
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.arc(0, 3.5, 4, 0.2, Math.PI - 0.2);
+      ctx.stroke();
+
+      ctx.restore();
+
+      // Protective Shield Bubble
+      if (player.hasShield) {
+        ctx.save();
+        ctx.translate(player.x, player.y);
+        const isExpiring = player.shieldTimer < 3.0;
+        if (isExpiring && Math.sin(globalTime * 14) < -0.3) ctx.globalAlpha = 0.45;
+        const bubbleR = player.radius + 12 + Math.sin(globalTime * 5) * 1.8;
+
+        const sg = ctx.createRadialGradient(-bubbleR * 0.3, -bubbleR * 0.3, 2, 0, 0, bubbleR);
+        sg.addColorStop(0, 'rgba(255, 255, 255, 0.25)');
+        sg.addColorStop(0.7, isExpiring ? 'rgba(249, 115, 22, 0.35)' : 'rgba(56, 189, 248, 0.38)');
+        sg.addColorStop(1, isExpiring ? 'rgba(239, 68, 68, 0.7)' : 'rgba(192, 132, 252, 0.75)');
+        ctx.fillStyle = sg;
+        ctx.beginPath();
+        ctx.arc(0, 0, bubbleR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = isExpiring ? '#fca5a5' : '#e0f2fe';
+        ctx.lineWidth = 2.4;
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+        ctx.beginPath();
+        ctx.ellipse(-bubbleR * 0.42, -bubbleR * 0.42, bubbleR * 0.3, bubbleR * 0.12, -Math.PI / 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        for (let i = 0; i < 3; i++) {
+          const a = globalTime * 3 + (i * Math.PI * 2) / 3;
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(Math.cos(a) * (bubbleR + 4), Math.sin(a) * (bubbleR + 4), 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        const prog = Math.max(0, Math.min(1, player.shieldTimer / 10));
+        ctx.strokeStyle = isExpiring ? '#ef4444' : '#34d399';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, bubbleR + 7, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * prog, false);
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`🛡️ ${player.shieldTimer.toFixed(1)}s`, 0, -bubbleR - 11);
+        ctx.restore();
+      }
+
+      ctx.restore();
+      ctx.restore();
+    }
+
+    // Controls
+    window.addEventListener('keydown', e => {
+      if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(e.code)) e.preventDefault();
+      if (e.code === 'ArrowLeft' || e.code === 'KeyA') inputs.left = true;
+      if (e.code === 'ArrowRight' || e.code === 'KeyD') inputs.right = true;
+      if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') inputs.jump = true;
+      if (e.code === 'KeyR' && (gameState === 'playing' || gameState === 'gameover')) {
+        lives = DIFF_CONFIGS[selectedDiff].lives;
+        loadLevel(currentLevelIndex);
+        setScreen('playing');
+      }
+    });
+
+    window.addEventListener('keyup', e => {
+      if (e.code === 'ArrowLeft' || e.code === 'KeyA') inputs.left = false;
+      if (e.code === 'ArrowRight' || e.code === 'KeyD') inputs.right = false;
+      if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') { inputs.jump = false; jumpKeyHeld = false; }
+    });
+
+    const bindTouch = (id, key) => {
+      const el = document.getElementById(id);
+      const onStart = e => { e.preventDefault(); inputs[key] = true; };
+      const onEnd = e => { e.preventDefault(); inputs[key] = false; if (key === 'jump') jumpKeyHeld = false; };
+      el.addEventListener('touchstart', onStart, { passive: false });
+      el.addEventListener('touchend', onEnd, { passive: false });
+      el.addEventListener('mousedown', onStart);
+      el.addEventListener('mouseup', onEnd);
+    };
+    bindTouch('btn-left', 'left');
+    bindTouch('btn-right', 'right');
+    bindTouch('btn-jump', 'jump');
+
+    // Color buttons
+    document.querySelectorAll('.color-dot').forEach(el => {
+      el.onclick = () => {
+        document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('selected'));
+        el.classList.add('selected');
+        selectedColor = el.dataset.color;
+      };
+    });
+
+    // Difficulty buttons
+    document.querySelectorAll('.diff-btn').forEach(el => {
+      el.onclick = () => {
+        document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('selected'));
+        el.classList.add('selected');
+        selectedDiff = el.dataset.diff;
+      };
+    });
+
+    document.getElementById('btn-start-game').onclick = () => {
+      lives = DIFF_CONFIGS[selectedDiff].lives;
+      loadLevel(0);
+      setScreen('playing');
+    };
+    document.getElementById('btn-open-levels').onclick = () => setScreen('levels');
+    document.getElementById('btn-close-levels').onclick = () => setScreen('menu');
+    document.getElementById('btn-next-level').onclick = () => {
+      currentLevelIndex++;
+      loadLevel(currentLevelIndex);
+      setScreen('playing');
+    };
+    document.getElementById('btn-replay-level').onclick = () => {
+      lives = DIFF_CONFIGS[selectedDiff].lives;
+      loadLevel(currentLevelIndex);
+      setScreen('playing');
+    };
+    document.getElementById('btn-retry-game').onclick = () => {
+      lives = DIFF_CONFIGS[selectedDiff].lives;
+      loadLevel(currentLevelIndex);
+      setScreen('playing');
+    };
+    document.getElementById('btn-menu-from-gameover').onclick = () => setScreen('menu');
+    document.getElementById('btn-restart-adventure').onclick = () => {
+      lives = DIFF_CONFIGS[selectedDiff].lives;
+      loadLevel(0);
+      setScreen('playing');
+    };
+    document.getElementById('btn-restart').onclick = () => {
+      lives = DIFF_CONFIGS[selectedDiff].lives;
+      loadLevel(currentLevelIndex);
+      setScreen('playing');
+    };
+    document.getElementById('btn-sound').onclick = () => {
+      const m = Sound.toggleMute();
+      document.getElementById('btn-sound').textContent = m ? '🔇' : '🔊';
+    };
+    document.getElementById('btn-pause').onclick = () => {
+      if (gameState === 'playing') setScreen('menu');
+      else if (gameState === 'menu') setScreen('playing');
+    };
+
+    function resizeCanvas() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const aspect = 16 / 9;
+      let tw = w; let th = w / aspect;
+      if (th > h) { th = h; tw = h * aspect; }
+      canvas.style.width = `${tw}px`;
+      canvas.style.height = `${th}px`;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    loadLevel(0);
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>

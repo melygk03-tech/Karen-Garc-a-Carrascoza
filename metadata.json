@@ -1,0 +1,6 @@
+{
+  "name": "OctoBall: Aventura Submarina",
+  "description": "Videojuego de plataformas 2D estilo Red Ball ambientado en el fondo marino con un pulpo acrobático, 10 niveles progresivos, físicas submarinas y controles táctiles.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
